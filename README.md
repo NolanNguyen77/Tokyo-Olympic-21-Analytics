@@ -1,5 +1,14 @@
 # 🏅 Olympic Tokyo Data Analytics with Azure
 
+## 📑 Table of Contents
+
+1. [📖 Giới thiệu](#-giới-thiệu)
+2. [📂 Cấu trúc thư mục](#-cấu-trúc-thư-mục)
+3. [⚙️ Công nghệ sử dụng](#️-công-nghệ-sử-dụng)
+4. [🔄 Data Pipeline](#-data-pipeline)
+5. [🚀 Cách chạy dự án](#-cách-chạy-dự-án)
+6. [📈 Kết quả đạt được](#-kết-quả-đạt-được)
+
 ## 📖 Giới thiệu
 
 Dự án **Olympic Tokyo** tập trung vào phân tích dữ liệu Thế vận hội Olympic Tokyo, bao gồm thông tin về vận động viên, huấn luyện viên, đội tuyển, huy chương... Dữ liệu gốc được lưu dưới dạng các file CSV trong thư mục `data/`.
@@ -14,80 +23,95 @@ Dự án hướng dẫn cách:
 ## 📂 Cấu trúc thư mục
 ``` bash
 OlympicTokyo/
-├── data/
-│ ├── Athletes.csv
-│ ├── Coaches.csv
-│ ├── EntriesGender.csv
-│ ├── Medals.csv
-│ └── Teams.csv
-└── README.md
+│
+├── data/                     # Dữ liệu Olympic
+│   ├── Athletes.csv          # Thông tin vận động viên
+│   ├── Coaches.csv           # Thông tin huấn luyện viên
+│   ├── EntriesGender.csv     # Số lượng VĐV theo giới tính
+│   ├── Medals.csv            # Bảng tổng kết huy chương
+│   └── Teams.csv             # Thông tin đội tuyển
+│
+├── Transformation.ipynb      # Notebook phân tích & xử lý dữ liệu
+└── README.md                 # Tài liệu mô tả dự án
+
 
 ```
 
----
-
-## ☁️ Yêu cầu & Chuẩn bị Azure
-
-- Tài khoản Azure Portal: https://portal.azure.com/
-- Tạo **Azure Storage Account** và **Blob Container** (ví dụ: `olympic-data`)
-- Lấy **Connection String** từ Azure Storage
 
 ---
 
-## 🛠️ Cài đặt thư viện
-
-```bash
-pip install azure-storage-blob pandas
-```
+## ⚙️ Công nghệ sử dụng  
+- **Azure Data Factory** → Thu thập & ingest dữ liệu từ nguồn vào Data Lake.  
+- **Azure Data Lake Storage Gen2** → Lưu trữ dữ liệu raw và transformed.  
+- **Azure Databricks (Apache Spark)** → Làm sạch, chuẩn hóa, biến đổi dữ liệu.
+- **Azure Synapse Analytics** → Phân tích dữ liệu đã biến đổi, chạy truy vấn OLAP.  
 
 ---
 
-## 🚀 Hướng dẫn sử dụng
+## 🔄 Data Pipeline  
 
-### 1. Cấu hình Azure
+### 1. Data Ingestion  
+- Dữ liệu từ nhiều nguồn (`CSV`, `API`) được ingest thông qua **Azure Data Factory**.  
+- Lưu vào **Raw Zone** của **Azure Data Lake Gen2**.  
 
-Tạo file `azure_config.py`:
+### 2. Transformation  
+- **Azure Databricks (PySpark)** đọc dữ liệu raw từ Data Lake.  
+- Thực hiện làm sạch, join, chuẩn hóa và lưu lại vào **Transformed Zone**.  
+
+### 3. Analytics  
+- **Azure Synapse Analytics** kết nối với Data Lake (transformed data).  
+- Thực hiện các truy vấn phân tích: thống kê huy chương, phân tích giới tính, đội tuyển, vận động viên.  
+
+
+## 🚀 Cách chạy dự án  
+
+### 1️⃣ Chuẩn bị môi trường  
+- Tạo **Azure Data Lake Storage Gen2** và upload folder `data/` vào container (ví dụ: `tokyo`).  
+- Tạo **Azure Databricks Workspace** và cluster Spark (Python runtime).  
+
+### 2️⃣ Import Notebook  
+- Trên Azure Databricks, import file `Transformation.ipynb` vào Workspace.  
+
+### 3️⃣ Cấu hình kết nối Spark với ADLS bằng OAuth  
+Trong Databricks Notebook, chạy đoạn lệnh sau (thay `<...>` bằng thông tin thực tế):  
 
 ```python
-AZURE_STORAGE_CONNECTION_STRING = "DefaultEndpointsProtocol=https;AccountName=YOUR_ACCOUNT_NAME;AccountKey=YOUR_ACCOUNT_KEY;EndpointSuffix=core.windows.net"
-CONTAINER_NAME = "olympic-data"
+spark.conf.set(
+    "fs.azure.account.auth.type.tokyoolympicdata7.dfs.core.windows.net",
+    "OAuth"
+)
+spark.conf.set(
+    "fs.azure.account.oauth.provider.type.tokyoolympicdata7.dfs.core.windows.net",
+    "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider"
+)
+spark.conf.set(
+    "fs.azure.account.oauth2.client.id.tokyoolympicdata7.dfs.core.windows.net",
+    "<APPLICATION_CLIENT_ID>"
+)
+spark.conf.set(
+    "fs.azure.account.oauth2.client.secret.tokyoolympicdata7.dfs.core.windows.net",
+    "<CLIENT_SECRET>"
+)
+spark.conf.set(
+    "fs.azure.account.oauth2.client.endpoint.tokyoolympicdata7.dfs.core.windows.net",
+    "https://login.microsoftonline.com/<TENANT_ID>/oauth2/token"
+)
 ```
-
-### 2. Upload dữ liệu lên Azure Blob Storage
-
-Tạo file `upload_to_azure.py`:
-
-```python
-import os
-from azure.storage.blob import BlobServiceClient
-from azure_config import AZURE_STORAGE_CONNECTION_STRING, CONTAINER_NAME
-from io import StringIO
-
-def read_csv_from_blob(blob_name):
-    blob_service_client = BlobServiceClient.from_connection_string(AZURE_STORAGE_CONNECTION_STRING)
-    blob_client = blob_service_client.get_blob_client(container=CONTAINER_NAME, blob=blob_name)
-    blob_data = blob_client.download_blob().readall()
-    return pd.read_csv(StringIO(blob_data.decode('utf-8')))
-
-if __name__ == "__main__":
-    df = read_csv_from_blob("Athletes.csv")
-    print("Số lượng vận động viên:", len(df))
-    print("Các quốc gia tham dự:", df['NOC'].unique())
-    print(df.head())
-```
-Chạy lệnh:
+### 4️⃣ Đọc dữ liệu từ Data Lake vào Spark
 ```bash
-python analyze_from_azure.py
+athletes_df = spark.read.csv("abfss://tokyo@tokyoolympicdata7.dfs.core.windows.net/Athletes.csv",
+                             header=True, inferSchema=True)
+athletes_df.show(5)
 ```
+### 5️⃣ Thực thi Notebook
+- Chạy các cell trong Transformation.ipynb để làm sạch, biến đổi dữ liệu.  
+- Kết quả được lưu lại trong Data Lake (Transformed Zone) và có thể truy vấn bằng Azure Synapse Analytics hoặc visualize bằng Power BI / Tableau / Looker Studio. 
 
----
 
-## 📌 Ghi chú
+## 📈 Kết quả đạt được
+Phân tích dữ liệu Olympic Tokyo 2021 trên Spark.
 
-- Không public Connection String lên GitHub.
-- Có thể mở rộng phân tích với các file CSV khác trong thư mục `data/`.
-- Nếu muốn dùng Jupyter Notebook, bạn có thể copy các đoạn code trên vào cell notebook.
+Thực hiện nhiều thống kê về vận động viên, đội tuyển, huy chương, giới tính.
 
----
+Tích hợp dữ liệu thành công với Azure Cloud.
 
-**© 2025 Olympic Tokyo Data Analytics Project**
