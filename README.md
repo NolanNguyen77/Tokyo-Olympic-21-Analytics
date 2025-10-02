@@ -11,12 +11,15 @@
 
 ## 📖 Giới thiệu
 
-Dự án **Olympic Tokyo** tập trung vào phân tích dữ liệu Thế vận hội Olympic Tokyo, bao gồm thông tin về vận động viên, huấn luyện viên, đội tuyển, huy chương... Dữ liệu gốc được lưu dưới dạng các file CSV trong thư mục `data/`.
+Dự án **Olympic Tokyo** tập trung vào phân tích dữ liệu Thế vận hội Olympic Tokyo, bao gồm thông tin về vận động viên, huấn luyện viên, đội tuyển, huy chương... Dữ liệu gốc được lưu dưới dạng các file CSV trong thư mục `data/` lấy từ Kaggle.
 
 Dự án hướng dẫn cách:
-- Lưu trữ dữ liệu trên Azure Blob Storage
-- Đọc và phân tích dữ liệu bằng Python & pandas
-- Ứng dụng các dịch vụ Azure cho phân tích dữ liệu
+- Thu thập dữ liệu từ Kaggle rồi lưu vào Azure Blob Storage dưới dạng thô.
+- Xây dựng pipeline bằng Azure Data Factory để tự động hóa việc trích xuất và nạp dữ liệu vào hệ thống lưu trữ.
+- Xử lý dữ liệu nâng cao bằng Azure Databricks sử dụng PySpark để làm sạch, chuẩn hóa và tính toán dữ liệu lớn.
+- Lưu dữ liệu đã xử lý trở lại Data Lake để phục vụ phân tích.
+- Phân tích dữ liệu bằng Azure Synapse Analytics, nơi chạy các truy vấn OLAP để tổng hợp và khám phá thông tin.
+
 
 ---
 
